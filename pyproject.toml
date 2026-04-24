@@ -3,7 +3,7 @@ name = "evosax"
 version = "0.2.0"
 dependencies = [
 	"numpy>=1.25",
-	"jax>=0.5.0,<0.7",
+	"jax>=0.8,<0.9",
 	"flax>=0.10.0,<0.11",
 	"orbax-checkpoint<0.11",
 	"dotmap",
@@ -45,7 +45,7 @@ examples = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/RobertTLange/evosax"
+Homepage = "https://github.com/githubpsyche/evosax"
 
 [tool.setuptools.packages.find]
 where = ["."]

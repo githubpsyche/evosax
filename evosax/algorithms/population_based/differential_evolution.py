@@ -31,6 +31,9 @@ class Params(BaseParams):
     elitism: bool  # If elitism, base vector is best member else random
     crossover_rate: float  # [0, 1]
     differential_weight: float  # [0, 2]
+    differential_weight_min: float  # [0, 2]
+    differential_weight_max: float  # [0, 2]
+    exclude_base_from_differential: bool
 
 
 class DifferentialEvolution(PopulationBasedAlgorithm):
@@ -56,6 +59,9 @@ class DifferentialEvolution(PopulationBasedAlgorithm):
             elitism=True,
             crossover_rate=0.9,
             differential_weight=0.8,
+            differential_weight_min=0.8,
+            differential_weight_max=0.8,
+            exclude_base_from_differential=True,
         )
 
     def _init(self, key: jax.Array, params: Params) -> State:
@@ -77,6 +83,16 @@ class DifferentialEvolution(PopulationBasedAlgorithm):
         keys = jax.random.split(key, self.population_size)
         member_ids = jnp.arange(self.population_size)
         best_index = jnp.argmin(state.fitness)
+        differential_weight = jnp.where(
+            params.differential_weight_min < params.differential_weight_max,
+            jax.random.uniform(
+                jax.random.fold_in(key, state.generation_counter),
+                (),
+                minval=params.differential_weight_min,
+                maxval=params.differential_weight_max,
+            ),
+            params.differential_weight,
+        )
 
         def _ask_member(key, member_id):
             x = state.population[member_id]
@@ -100,14 +116,16 @@ class DifferentialEvolution(PopulationBasedAlgorithm):
             mask = jnp.logical_or(r < params.crossover_rate, R)
 
             # Diff vectors
-            p = p.at[a_index].set(0.0)
+            p = jnp.where(
+                params.exclude_base_from_differential, p.at[a_index].set(0.0), p
+            )
             for _ in range(self.num_diff):
                 key_ab, subkey = jax.random.split(key_ab)
                 b, c = jax.random.choice(
                     subkey, state.population, (2,), replace=False, p=p
                 )
 
-                a = jnp.where(mask, a + params.differential_weight * (b - c), x)
+                a = jnp.where(mask, a + differential_weight * (b - c), x)
 
             return a
 
